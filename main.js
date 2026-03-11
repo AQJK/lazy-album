@@ -164,13 +164,39 @@ class LazyAlbumRenderer extends obsidian.MarkdownRenderChild {
         const lines = this.src.split("\n").map(l => l.trim()).filter(l => l.length > 0);
         
         let columns = 3, gap = 10, perpage = 0, itemsData = [], excludeList = [], rawEntries = [], errors = [];
+        // --- 核心解析逻辑改进 ---
+        let currentMode = "path"; // 默认模式是路径
 
         lines.forEach(line => {
-            if (line.startsWith("columns:")) columns = parseInt(line.split(":")[1]) || 3;
-            else if (line.startsWith("gap:")) gap = parseInt(line.split(":")[1]) || 10;
-            else if (line.startsWith("perpage:")) perpage = parseInt(line.split(":")[1]) || 0;
-            else if (line.startsWith("exclude:")) excludeList.push(...line.replace("exclude:", "").split(",").map(s => s.trim()));
-            else if (!line.startsWith("#")) rawEntries.push(line);
+            // 1. 处理配置项 (K:V 格式)
+            if (line.startsWith("columns:")) {
+                columns = parseInt(line.split(":")[1]) || 3;
+            } else if (line.startsWith("gap:")) {
+                gap = parseInt(line.split(":")[1]) || 10;
+            } else if (line.startsWith("perpage:")) {
+                perpage = parseInt(line.split(":")[1]) || 0;
+            } 
+            // 2. 模式切换
+            else if (line.startsWith("exclude:")) {
+                currentMode = "exclude";
+                const content = line.replace("exclude:", "").trim();
+                if (content) excludeList.push(...content.split(",").map(s => s.trim()));
+            } else if (line.startsWith("list:")) {
+                currentMode = "path";
+                const content = line.replace("list:", "").trim();
+                if (content) rawEntries.push(content);
+            }
+            
+            // 3. 处理回车后的连续内容
+            else if (!line.startsWith("#")) { // 忽略注释
+                if (currentMode === "exclude") {
+                    // 如果在 exclude 模式下，这一行被视为要排除的路径
+                    excludeList.push(line);
+                } else {
+                    // 否则视为图片路径
+                    rawEntries.push(line);
+                }
+            }
         });
 
         for (const entry of rawEntries) {
