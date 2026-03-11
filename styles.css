@@ -1,0 +1,140 @@
+/* Lazy Album 主容器 */
+.lazy-album-container {
+    width: 100%;
+    margin: 1em 0;
+}
+
+/* 每一个图片项容器 */
+.lazy-album-item {
+    position: relative; 
+    break-inside: avoid;
+    border-radius: 8px;
+    margin-bottom: 0; /* 间距由 JS 控制，这里设为 0 防止双倍间距 */
+    overflow: hidden;
+    background-color: var(--background-secondary-alt);
+    border: 1px solid var(--divider-color);
+    transition: transform 0.3s ease;
+    /* 强制硬件加速，防止动画卡顿 */
+    backface-visibility: hidden;
+}
+
+/* 图片基础样式 */
+.lazy-album-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: cover; /* 保证图片填充感 */
+    cursor: zoom-in;
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+}
+
+/* 悬停时图片轻微缩放 */
+.lazy-album-item:hover .lazy-album-img {
+    transform: scale(1.08);
+}
+
+/* 悬停 Caption 样式 */
+.lazy-album-caption {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 40px 10px 12px 10px; /* 增加顶部空间让渐变自然 */
+    
+    /* 优化后的渐变：从底部深黑到顶部全透明 */
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.4) 70%, transparent 100%);
+    
+    color: white !important;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); /* 核心改进：增强可读性 */
+    font-size: 0.85em;
+    font-weight: 500;
+    text-align: center;
+    
+    opacity: 0;
+    transform: translateY(100%); /* 从更下方划入 */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    pointer-events: none; 
+    z-index: 1;
+}
+
+.lazy-album-item:hover .lazy-album-caption {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* 调试/错误信息样式 */
+.lazy-album-debug { /* 注意：你的 JS 里用的是 lazy-album-debug，这里要对上 */
+    font-size: 0.8em;
+    margin-bottom: 10px;
+}
+
+/* 分页包装器 */
+.lazy-pagination-wrapper {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+    width: 100%;
+}
+
+/* 胶囊主体：适配 Obsidian 颜色主题 */
+.lazy-capsule-nav {
+    display: flex;
+    align-items: center;
+    background-color: var(--background-modifier-success-inverse, #1a1a1a); /* 优先使用主题反色 */
+    padding: 4px 12px;
+    border-radius: 50px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--background-modifier-border);
+}
+
+/* 导航按钮 */
+.lazy-nav-btn {
+    background: transparent !important;
+    border: none !important;
+    color: white !important;
+    font-size: 1.1em;
+    padding: 4px 12px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    box-shadow: none !important;
+}
+
+/* 浅色模式适配：如果用户用的是浅色主题，胶囊文字可能看不清 */
+.theme-light .lazy-nav-info,
+.theme-light .lazy-nav-btn {
+    /* 如果你想在浅色模式也保持黑色胶囊，可以不改。
+       如果想随主题变，可以在这里定义 */
+}
+
+.lazy-nav-btn:hover:not(:disabled) {
+    opacity: 0.6;
+}
+
+.lazy-nav-btn:disabled {
+    color: #555555 !important;
+    cursor: not-allowed;
+    opacity: 0.3;
+}
+
+/* 页码信息 */
+.lazy-nav-info {
+    color: white;
+    font-size: 0.8em;
+    margin: 0 10px;
+    min-width: 60px;
+    text-align: center;
+    font-weight: 500;
+    border-left: 1px solid rgba(255,255,255,0.2);
+    border-right: 1px solid rgba(255,255,255,0.2);
+    padding: 0 10px;
+}
+
+/* 适配移动端 */
+@media (max-width: 480px) {
+    .lazy-album-container {
+        column-count: 2 !important;
+        column-gap: 8px !important;
+    }
+}
