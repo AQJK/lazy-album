@@ -7,6 +7,8 @@ const TRANSLATIONS = {
     en: {
         settingName: "Auto Update Paths",
         settingDesc: "Automatically update paths in lazy-album blocks when files or folders are moved.",
+        showCaptionName: "Show Captions",
+        showCaptionDesc: "Display the image filename or custom caption below the image(need restart).",
         noticeChecking: "Lazy Album: Checking for path updates...",
         noticeUpdated: "Lazy Album: Updated {count} paths ✅",
         errorPath: "⚠️ Path invalid: ",
@@ -16,6 +18,8 @@ const TRANSLATIONS = {
     zh: {
         settingName: "自动更新路径",
         settingDesc: "当移动图片或文件夹时，自动更新所有 lazy-album 代码块中的路径。",
+        showCaptionName: "显示标题",
+        showCaptionDesc: "鼠标悬停时显示文件名或自定义标题(重启生效）",
         noticeChecking: "Lazy Album: 正在检查路径更新...",
         noticeUpdated: "Lazy Album: 已自动更新 {count} 处路径 ✅",
         errorPath: "⚠️ 路径失效: ",
@@ -34,6 +38,8 @@ class LazyAlbumSettingTab extends obsidian.PluginSettingTab {
         const { containerEl } = this;
         const t = this.plugin.t; 
         containerEl.empty();
+        
+        // 自动更新路径开关
         new obsidian.Setting(containerEl)
             .setName(t.settingName)
             .setDesc(t.settingDesc)
@@ -41,6 +47,17 @@ class LazyAlbumSettingTab extends obsidian.PluginSettingTab {
                 .setValue(this.plugin.settings.autoUpdatePath)
                 .onChange(async (value) => {
                     this.plugin.settings.autoUpdatePath = value;
+                    await this.plugin.saveSettings();
+                }));
+
+        // 显示标题开关
+        new obsidian.Setting(containerEl)
+            .setName(t.showCaptionName)
+            .setDesc(t.showCaptionDesc)
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.showCaption)
+                .onChange(async (value) => {
+                    this.plugin.settings.showCaption = value;
                     await this.plugin.saveSettings();
                 }));
     }
@@ -51,7 +68,11 @@ module.exports = class LazyAlbumPlugin extends obsidian.Plugin {
     async onload() {
         this.t = this.getTranslations();
         
-        this.settings = Object.assign({ autoUpdatePath: true }, await this.loadData());
+        // 初始化设置，默认开启 showCaption
+        this.settings = Object.assign({ 
+            autoUpdatePath: true,
+            showCaption: true 
+        }, await this.loadData());
         this.addSettingTab(new LazyAlbumSettingTab(this.app, this));
 
         // 核心：注册 lazy-album 代码块处理器
@@ -164,11 +185,9 @@ class LazyAlbumRenderer extends obsidian.MarkdownRenderChild {
         const lines = this.src.split("\n").map(l => l.trim()).filter(l => l.length > 0);
         
         let columns = 3, gap = 10, perpage = 0, itemsData = [], excludeList = [], rawEntries = [], errors = [];
-        // --- 核心解析逻辑改进 ---
-        let currentMode = "path"; // 默认模式是路径
+        let currentMode = "path";
 
         lines.forEach(line => {
-            // 1. 处理配置项 (K:V 格式)
             if (line.startsWith("columns:")) {
                 columns = parseInt(line.split(":")[1]) || 3;
             } else if (line.startsWith("gap:")) {
@@ -176,7 +195,6 @@ class LazyAlbumRenderer extends obsidian.MarkdownRenderChild {
             } else if (line.startsWith("perpage:")) {
                 perpage = parseInt(line.split(":")[1]) || 0;
             } 
-            // 2. 模式切换
             else if (line.startsWith("exclude:")) {
                 currentMode = "exclude";
                 const content = line.replace("exclude:", "").trim();
@@ -186,14 +204,10 @@ class LazyAlbumRenderer extends obsidian.MarkdownRenderChild {
                 const content = line.replace("list:", "").trim();
                 if (content) rawEntries.push(content);
             }
-            
-            // 3. 处理回车后的连续内容
-            else if (!line.startsWith("#")) { // 忽略注释
+            else if (!line.startsWith("#")) {
                 if (currentMode === "exclude") {
-                    // 如果在 exclude 模式下，这一行被视为要排除的路径
                     excludeList.push(line);
                 } else {
-                    // 否则视为图片路径
                     rawEntries.push(line);
                 }
             }
@@ -294,7 +308,8 @@ class LazyAlbumRenderer extends obsidian.MarkdownRenderChild {
                     attr: { src: item.url, loading: "lazy" } 
                 });
 
-                if (item.caption) {
+                // 这里根据全局设置 showCaption 决定是否渲染标题
+                if (this.plugin.settings.showCaption && item.caption) {
                     itemDiv.createEl("div", { cls: "lazy-album-caption", text: item.caption });
                 }
             });
