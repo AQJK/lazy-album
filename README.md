@@ -124,4 +124,6 @@ https://i.pinimg.com/736x/9b/f0/db/9bf0db553e945a8f1691576628378d80.jpg | A Clim
 ```
 ## 打赏
 如果觉得这个插件好用，可以请我喝瓶水支持后续开发，非常感谢！:'3   
-<a href="[爱发电](https://afdian.com/a/somehowitworks)"><img src="https://img.shields.io/badge/爱发电-946ce6?style=for-the-badge&logo=afdian&logoColor=white" /></a>
+<a href="https://afdian.com/a/somehowitworks">
+  <img src="https://img.shields.io/badge/爱发电-946ce6?style=for-the-badge&logo=afdian&logoColor=white" />
+</a>
