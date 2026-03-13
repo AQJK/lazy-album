@@ -3,7 +3,8 @@
     "name": "Lazy Album",
     "version": "1.0.0",
     "minAppVersion": "1.0.0",
-    "description": "Render images  as a masonry gallery.",
+    "description": "Render images as a masonry gallery.",
     "author": "SomehowItWorks",
     "isDesktopOnly": true
+
 }
