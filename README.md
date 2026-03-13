@@ -1,4 +1,4 @@
-# lazy-album 懒人相册(WIP)
+# lazy-album 懒人相册
 
 ![Lazy Album Demo](https://raw.githubusercontent.com/SomehowItWorks/lazy-album/master/lazy%20album%20demo.gif)
 
