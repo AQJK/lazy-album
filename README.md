@@ -64,8 +64,7 @@ https://i.pinimg.com/736x/9b/f0/db/9bf0db553e945a8f1691576628378d80.jpg | A Clim
 ```
 
 <a name="chinese"></a>
-
-中文
+---
 >⚠️这个插件的代码是由Google Gemini协助生成的。如果你很难接受AI生成的程式，请谨慎下载。
 
 >ℹ️本插件目前不包含灯箱功能（即点击图片不会有任何事情发生）。欲获得最佳体验，推荐与 Image Toolkit 等插件配合使用。
