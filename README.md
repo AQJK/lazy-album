@@ -1,6 +1,6 @@
 # lazy-album 懒人相册(WIP)
 
-[English](#english) | [简体中文](#chinese)
+[English](#english) | [简中](#chinese)
 
 <a name="english"></a>
 >⚠️The coding of this plugin is assisted by Google Gemini. If Ai programming upsets you, please think twice before installing it.
