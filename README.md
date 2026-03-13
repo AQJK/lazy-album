@@ -1,6 +1,6 @@
 # lazy-album 懒人相册(WIP)
 
-![演示动画](lazy-album/lazy album demo.gif)
+![Lazy Album Demo](https://raw.githubusercontent.com/SomehowItWorks/lazy-album/master/lazy%20album%20demo.gif)
 
 [English](#english) | [简中](#chinese)
 
