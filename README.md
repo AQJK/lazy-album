@@ -1,5 +1,7 @@
 # lazy-album 懒人相册(WIP)
 
+![演示动画](lazy-album/lazy album demo.gif)
+
 [English](#english) | [简中](#chinese)
 
 <a name="english"></a>
