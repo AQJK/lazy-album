@@ -96,53 +96,27 @@ module.exports = class LazyAlbumPlugin extends obsidian.Plugin {
         const mdFiles = this.app.vault.getMarkdownFiles();
         let updateCount = 0;
 
-        new obsidian.Notice(this.t.noticeChecking, 2000);
-
+        // 只有当文件名或路径真的在库里被引用时才执行 Notice
         for (const mdFile of mdFiles) {
-            const content = await this.app.vault.read(mdFile);
-            if (!content.includes("lazy-album") || !content.includes(oldPath)) continue;
+            // 使用 metadataCache 快速预检，避免全量读取内容，极大提升性能
+            const cache = this.app.metadataCache.getFileCache(mdFile);
+            if (!cache || !cache.sections || !cache.sections.some(s => s.type === "code")) continue;
 
-            let editor = null;
-            this.app.workspace.iterateAllLeaves(leaf => {
-                if (leaf.view instanceof obsidian.MarkdownView && leaf.view.file?.path === mdFile.path) {
-                    editor = leaf.view.editor;
-                }
+            await this.app.vault.process(mdFile, (content) => {
+                if (!content.includes("lazy-album") || !content.includes(oldPath)) return content;
+
+                const codeBlockRegex = /```lazy-album[\s\S]*?```/g;
+                const newContent = content.replace(codeBlockRegex, (block) => {
+                    if (block.includes(oldPath)) {
+                        // 统计更新次数（虽然是全量替换，但统计精准到匹配次数）
+                        const matches = block.split(oldPath).length - 1;
+                        updateCount += matches;
+                        return block.split(oldPath).join(file.path);
+                    }
+                    return block;
+                });
+                return newContent;
             });
-
-            const codeBlockRegex = /```lazy-album[\s\S]*?```/g;
-
-            if (editor) {
-                const doc = editor.getValue();
-                const newDoc = doc.replace(codeBlockRegex, (block) => {
-                    const lines = block.split("\n");
-                    return lines.map(line => {
-                        if (line.includes(oldPath)) {
-                            updateCount++;
-                            return line.replace(oldPath, file.path);
-                        }
-                        return line;
-                    }).join("\n");
-                });
-                
-                if (doc !== newDoc) {
-                    const cursor = editor.getCursor();
-                    editor.setValue(newDoc);
-                    editor.setCursor(cursor);
-                }
-            } else {
-                await this.app.vault.process(mdFile, (data) => {
-                    return data.replace(codeBlockRegex, (block) => {
-                        const lines = block.split("\n");
-                        return lines.map(line => {
-                            if (line.includes(oldPath)) {
-                                updateCount++;
-                                return line.replace(oldPath, file.path);
-                            }
-                            return line;
-                        }).join("\n");
-                    });
-                });
-            }
         }
 
         if (updateCount > 0) {
@@ -184,7 +158,7 @@ class LazyAlbumRenderer extends obsidian.MarkdownRenderChild {
         const t = this.plugin.t; 
         const lines = this.src.split("\n").map(l => l.trim()).filter(l => l.length > 0);
         
-        let columns = 3, gap = 10, perpage = 0, itemsData = [], excludeList = [], rawEntries = [], errors = [];
+        let columns = 3, gap = 5, perpage = 0, itemsData = [], excludeList = [], rawEntries = [], errors = [];
         let currentMode = "path";
 
         lines.forEach(line => {
