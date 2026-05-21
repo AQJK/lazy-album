@@ -1,10 +1,9 @@
 {
     "id": "lazy-album",
     "name": "Lazy Album",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "minAppVersion": "1.0.0",
-    "description": "Render images as a masonry gallery.",
-    "author": "SomehowItWorks",
+    "description": "Masonry image gallery with lightbox, keyboard navigation, and image deletion.",
+    "author": "AQJK",
     "isDesktopOnly": true
-
 }

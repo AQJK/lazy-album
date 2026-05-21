@@ -14,6 +14,10 @@ const TRANSLATIONS = {
         errorPath: "⚠️ Path invalid: ",
         emptyAlbum: "🖼️ Lazy Album: No images found",
         loading: "⌛ Loading or no content to display",
+        lightboxClose: "Close (Esc)",
+        lightboxDelete: "Cmd+Delete to remove file",
+        lightboxDeleteConfirm: "Delete this image?",
+        lightboxDeleted: "🗑️ Image deleted",
     },
     zh: {
         settingName: "自动更新路径",
@@ -25,6 +29,10 @@ const TRANSLATIONS = {
         errorPath: "⚠️ 路径失效: ",
         emptyAlbum: "🖼️ Lazy Album: 暂无图片",
         loading: "⌛ 正在加载或无内容可显示",
+        lightboxClose: "关闭 (Esc)",
+        lightboxDelete: "Cmd+Delete 删除文件",
+        lightboxDeleteConfirm: "删除这张图片？",
+        lightboxDeleted: "🗑️ 图片已删除",
     }
 };
 
@@ -39,7 +47,6 @@ class LazyAlbumSettingTab extends obsidian.PluginSettingTab {
         const t = this.plugin.t; 
         containerEl.empty();
         
-        // 自动更新路径开关
         new obsidian.Setting(containerEl)
             .setName(t.settingName)
             .setDesc(t.settingDesc)
@@ -50,7 +57,6 @@ class LazyAlbumSettingTab extends obsidian.PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
-        // 显示标题开关
         new obsidian.Setting(containerEl)
             .setName(t.showCaptionName)
             .setDesc(t.showCaptionDesc)
@@ -68,14 +74,12 @@ module.exports = class LazyAlbumPlugin extends obsidian.Plugin {
     async onload() {
         this.t = this.getTranslations();
         
-        // 初始化设置，默认开启 showCaption
         this.settings = Object.assign({ 
             autoUpdatePath: true,
             showCaption: true 
         }, await this.loadData());
         this.addSettingTab(new LazyAlbumSettingTab(this.app, this));
 
-        // 核心：注册 lazy-album 代码块处理器
         this.registerMarkdownCodeBlockProcessor("lazy-album", (src, el, ctx) => {
             const handler = new LazyAlbumRenderer(this, src, el, ctx);
             ctx.addChild(handler);
@@ -96,9 +100,7 @@ module.exports = class LazyAlbumPlugin extends obsidian.Plugin {
         const mdFiles = this.app.vault.getMarkdownFiles();
         let updateCount = 0;
 
-        // 只有当文件名或路径真的在库里被引用时才执行 Notice
         for (const mdFile of mdFiles) {
-            // 使用 metadataCache 快速预检，避免全量读取内容，极大提升性能
             const cache = this.app.metadataCache.getFileCache(mdFile);
             if (!cache || !cache.sections || !cache.sections.some(s => s.type === "code")) continue;
 
@@ -108,7 +110,6 @@ module.exports = class LazyAlbumPlugin extends obsidian.Plugin {
                 const codeBlockRegex = /```lazy-album[\s\S]*?```/g;
                 const newContent = content.replace(codeBlockRegex, (block) => {
                     if (block.includes(oldPath)) {
-                        // 统计更新次数（虽然是全量替换，但统计精准到匹配次数）
                         const matches = block.split(oldPath).length - 1;
                         updateCount += matches;
                         return block.split(oldPath).join(file.path);
@@ -191,7 +192,7 @@ class LazyAlbumRenderer extends obsidian.MarkdownRenderChild {
             const [pathPart, captionPart] = entry.split("|").map(s => s.trim());
             
             if (pathPart.startsWith("http")) {
-                itemsData.push({ url: pathPart, caption: captionPart || "" });
+                itemsData.push({ url: pathPart, caption: captionPart || "", file: null });
                 continue;
             }
 
@@ -204,13 +205,14 @@ class LazyAlbumRenderer extends obsidian.MarkdownRenderChild {
             }
 
             if (abstractFile instanceof obsidian.TFolder) {
-                abstractFile.children.forEach(file => {
-                    if (file instanceof obsidian.TFile && ["jpg","jpeg","png","webp","gif"].includes(file.extension.toLowerCase())) {
-                        if (!excludeList.includes(file.name) && !excludeList.includes(file.path)) {
-                            const imgUrl = this.plugin.app.vault.adapter.getResourcePath(file.path);
-                            if (imgUrl) {
-                                itemsData.push({ url: imgUrl, caption: file.basename });
-                            }
+                const sortedChildren = abstractFile.children
+                    .filter(file => file instanceof obsidian.TFile && ["jpg","jpeg","png","webp","gif"].includes(file.extension.toLowerCase()))
+                    .sort((a, b) => (b.stat?.mtime || 0) - (a.stat?.mtime || 0));
+                sortedChildren.forEach(file => {
+                    if (!excludeList.includes(file.name) && !excludeList.includes(file.path)) {
+                        const imgUrl = this.plugin.app.vault.adapter.getResourcePath(file.path);
+                        if (imgUrl) {
+                            itemsData.push({ url: imgUrl, caption: file.basename, file: file });
                         }
                     }
                 });
@@ -218,7 +220,7 @@ class LazyAlbumRenderer extends obsidian.MarkdownRenderChild {
                 if (["jpg","jpeg","png","webp","gif"].includes(abstractFile.extension.toLowerCase())) {
                     const imgUrl = this.plugin.app.vault.adapter.getResourcePath(abstractFile.path);
                     if (imgUrl) {
-                        itemsData.push({ url: imgUrl, caption: captionPart || abstractFile.basename });
+                        itemsData.push({ url: imgUrl, caption: captionPart || abstractFile.basename, file: abstractFile });
                     }
                 } else {
                     errors.push(`⚠️ Not an image: ${pathPart}`);
@@ -273,22 +275,170 @@ class LazyAlbumRenderer extends obsidian.MarkdownRenderChild {
             gallery.style.columnCount = columns.toString();
             gallery.style.columnGap = gap + "px";
             
-            displayItems.forEach(item => {
+            // Store items on the renderer so lightbox can access full list
+            this._allItems = itemsData;
+            
+            displayItems.forEach((item, index) => {
                 const itemDiv = gallery.createEl("div", { cls: "lazy-album-item" });
                 itemDiv.style.marginBottom = gap + "px";
                 
-                itemDiv.createEl("img", { 
+                const imgEl = itemDiv.createEl("img", { 
                     cls: "lazy-album-img", 
                     attr: { src: item.url, loading: "lazy" } 
                 });
 
-                // 这里根据全局设置 showCaption 决定是否渲染标题
+                // Click to open lightbox
+                imgEl.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    // Find the actual index in the full itemsData
+                    const realIndex = itemsData.indexOf(item);
+                    this.openLightbox(itemsData, realIndex >= 0 ? realIndex : index);
+                });
+
                 if (this.plugin.settings.showCaption && item.caption) {
                     itemDiv.createEl("div", { cls: "lazy-album-caption", text: item.caption });
                 }
             });
         } else if (errors.length === 0) {
             this.container.createEl("div", { text: t.emptyAlbum, cls: "lazy-album-empty" });
+        }
+    }
+
+    // --- Lightbox ---
+    openLightbox(items, startIndex) {
+        const t = this.plugin.t;
+        let currentIndex = startIndex;
+        const overlay = document.createElement("div");
+        overlay.className = "lazy-lightbox-overlay";
+
+        // Close button
+        const closeBtn = overlay.createEl("button", { text: "✕", cls: "lazy-lightbox-close" });
+        closeBtn.onclick = () => overlay.remove();
+
+        // Navigation
+        const prevBtn = overlay.createEl("button", { text: "‹", cls: "lazy-lightbox-nav prev" });
+        const nextBtn = overlay.createEl("button", { text: "›", cls: "lazy-lightbox-nav next" });
+        
+        // Counter
+        const counter = overlay.createEl("div", { cls: "lazy-lightbox-counter" });
+        
+        // File name (click to copy)
+        const filenameEl = overlay.createEl("div", { 
+            cls: "lazy-lightbox-filename",
+            text: ""
+        });
+        filenameEl.style.cssText = `
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            font-family: inherit;
+            cursor: pointer;
+            padding: 6px 16px;
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.4);
+            user-select: none;
+            transition: background 0.2s;
+            max-width: 60%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        `;
+        filenameEl.addEventListener("mouseenter", () => {
+            filenameEl.style.background = "rgba(255, 255, 255, 0.15)";
+        });
+        filenameEl.addEventListener("mouseleave", () => {
+            filenameEl.style.background = "rgba(0, 0, 0, 0.4)";
+        });
+        filenameEl.addEventListener("click", () => {
+            const text = filenameEl.textContent;
+            if (text) {
+                navigator.clipboard.writeText(text).then(() => {
+                    new obsidian.Notice(`Copied: ${text}`);
+                });
+            }
+        });
+
+        // Delete hint
+        const deleteHint = overlay.createEl("div", { cls: "lazy-lightbox-delete-hint", text: t.lightboxDelete });
+
+        // Image
+        const img = overlay.createEl("img", { cls: "lazy-lightbox-img" });
+
+        function updateImage(index) {
+            if (index < 0 || index >= items.length) return;
+            currentIndex = index;
+            const item = items[index];
+            img.src = item.url;
+            filenameEl.textContent = item.caption || "";
+            counter.textContent = `${index + 1} / ${items.length}`;
+            prevBtn.style.display = index === 0 ? "none" : "block";
+            nextBtn.style.display = index >= items.length - 1 ? "none" : "block";
+        }
+
+        prevBtn.onclick = () => updateImage(currentIndex - 1);
+        nextBtn.onclick = () => updateImage(currentIndex + 1);
+
+        // Keyboard navigation
+        const keyHandler = (e) => {
+            if (e.key === "Escape") {
+                overlay.remove();
+            } else if (e.key === "ArrowLeft") {
+                updateImage(currentIndex - 1);
+            } else if (e.key === "ArrowRight") {
+                updateImage(currentIndex + 1);
+            } else if ((e.metaKey || e.ctrlKey) && e.key === "Backspace") {
+                // Cmd+Delete to trash file
+                const item = items[currentIndex];
+                if (item && item.file) {
+                    e.preventDefault();
+                    this.deleteImageFromLightbox(item, overlay);
+                }
+            } else if (e.key === "Enter") {
+                // Enter to copy filename
+                const item = items[currentIndex];
+                if (item && item.caption) {
+                    navigator.clipboard.writeText(item.caption).then(() => {
+                        new obsidian.Notice(`Copied: ${item.caption}`);
+                    });
+                }
+            }
+        };
+        document.addEventListener("keydown", keyHandler);
+
+        // Remove listener when closed
+        const observer = new MutationObserver(() => {
+            if (!document.contains(overlay)) {
+                document.removeEventListener("keydown", keyHandler);
+                observer.disconnect();
+            }
+        });
+        observer.observe(document.body, { childList: true });
+
+        // Click overlay background to close
+        overlay.addEventListener("click", (e) => {
+            if (e.target === overlay) overlay.remove();
+        });
+
+        document.body.appendChild(overlay);
+        updateImage(startIndex);
+    }
+
+    async deleteImageFromLightbox(item, overlay) {
+        const t = this.plugin.t;
+        if (!item.file) {
+            new obsidian.Notice("Cannot delete: not a local file");
+            return;
+        }
+        try {
+            await this.plugin.app.vault.trash(item.file, true);
+            new obsidian.Notice(t.lightboxDeleted);
+            overlay.remove();
+            this.render();
+        } catch (err) {
+            new obsidian.Notice(`Error deleting file: ${err.message}`);
         }
     }
 }

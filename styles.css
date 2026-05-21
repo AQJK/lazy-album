@@ -65,7 +65,7 @@
 }
 
 /* 调试/错误信息样式 */
-.lazy-album-debug { /* 注意：你的 JS 里用的是 lazy-album-debug，这里要对上 */
+.lazy-album-debug {
     font-size: 0.8em;
     margin-bottom: 10px;
 }
@@ -82,7 +82,7 @@
 .lazy-capsule-nav {
     display: flex;
     align-items: center;
-    background-color: var(--background-modifier-success-inverse, #1a1a1a); /* 优先使用主题反色 */
+    background-color: var(--background-modifier-success-inverse, #1a1a1a);
     padding: 4px 12px;
     border-radius: 50px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
@@ -99,13 +99,6 @@
     cursor: pointer;
     transition: opacity 0.2s;
     box-shadow: none !important;
-}
-
-/* 浅色模式适配：如果用户用的是浅色主题，胶囊文字可能看不清 */
-.theme-light .lazy-nav-info,
-.theme-light .lazy-nav-btn {
-    /* 如果你想在浅色模式也保持黑色胶囊，可以不改。
-       如果想随主题变，可以在这里定义 */
 }
 
 .lazy-nav-btn:hover:not(:disabled) {
@@ -129,6 +122,95 @@
     border-left: 1px solid rgba(255,255,255,0.2);
     border-right: 1px solid rgba(255,255,255,0.2);
     padding: 0 10px;
+}
+
+/* ===== Lightbox 样式 ===== */
+.lazy-lightbox-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.92);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: zoom-out;
+}
+
+.lazy-lightbox-overlay .lazy-lightbox-close {
+    position: absolute;
+    top: 20px;
+    right: 30px;
+    color: white;
+    font-size: 32px;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    z-index: 10;
+    background: none;
+    border: none;
+    font-family: inherit;
+}
+.lazy-lightbox-overlay .lazy-lightbox-close:hover {
+    opacity: 1;
+}
+
+.lazy-lightbox-overlay .lazy-lightbox-img {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
+    border-radius: 4px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+    cursor: default;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.lazy-lightbox-overlay .lazy-lightbox-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    color: white;
+    font-size: 48px;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+    padding: 20px;
+    user-select: none;
+    background: none;
+    border: none;
+    font-family: inherit;
+}
+.lazy-lightbox-overlay .lazy-lightbox-nav:hover {
+    opacity: 1;
+}
+.lazy-lightbox-overlay .lazy-lightbox-nav.prev {
+    left: 10px;
+}
+.lazy-lightbox-overlay .lazy-lightbox-nav.next {
+    right: 10px;
+}
+
+.lazy-lightbox-overlay .lazy-lightbox-counter {
+    position: absolute;
+    bottom: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 14px;
+    font-family: inherit;
+}
+
+.lazy-lightbox-overlay .lazy-lightbox-delete-hint {
+    position: absolute;
+    bottom: 55px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255, 100, 100, 0.5);
+    font-size: 12px;
+    font-family: inherit;
 }
 
 /* 适配移动端 */
