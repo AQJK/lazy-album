@@ -143,9 +143,12 @@ class LazyAlbumRenderer extends obsidian.MarkdownRenderChild {
     }
 
     getResourceUrl(file) {
-        // vault.getResourcePath() takes a TFile object; adapter.getResourcePath() takes a string path
+        // Try vault.getResourcePath (TFile), vault.getResourceUrl (newer API), then adapter (string path)
         try {
             if (file instanceof obsidian.TFile) {
+                if (this.plugin.app.vault.getResourceUrl) {
+                    return this.plugin.app.vault.getResourceUrl(file);
+                }
                 return this.plugin.app.vault.getResourcePath(file);
             }
         } catch {
