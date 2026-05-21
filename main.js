@@ -481,9 +481,9 @@ class LazyAlbumRenderer extends obsidian.MarkdownRenderChild {
         });
         observer.observe(document.body, { childList: true });
 
-        // Click overlay background to close
+        // Click overlay background to close; on mobile, clicking image closes too
         overlay.addEventListener("click", (e) => {
-            if (e.target === overlay) overlay.remove();
+            if (e.target === overlay || (this.isMobile && e.target === img)) overlay.remove();
         });
 
         document.body.appendChild(overlay);
