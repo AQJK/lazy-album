@@ -142,15 +142,19 @@ class LazyAlbumRenderer extends obsidian.MarkdownRenderChild {
         this.isMobile = !obsidian.Platform.isDesktop;
     }
 
-    getResourceUrl(path) {
+    getResourceUrl(file) {
+        // vault.getResourcePath() takes a TFile object; adapter.getResourcePath() takes a string path
         try {
-            return this.plugin.app.vault.getResourcePath(path);
-        } catch {
-            try {
-                return this.plugin.app.vault.adapter.getResourcePath(path);
-            } catch {
-                return null;
+            if (file instanceof obsidian.TFile) {
+                return this.plugin.app.vault.getResourcePath(file);
             }
+        } catch {
+            // fall through to adapter
+        }
+        try {
+            return this.plugin.app.vault.adapter.getResourcePath(file.path || file);
+        } catch {
+            return null;
         }
     }
 
@@ -223,7 +227,7 @@ class LazyAlbumRenderer extends obsidian.MarkdownRenderChild {
                     .sort((a, b) => (b.stat?.mtime || 0) - (a.stat?.mtime || 0));
                 sortedChildren.forEach(file => {
                     if (!excludeList.includes(file.name) && !excludeList.includes(file.path)) {
-                        const imgUrl = this.getResourceUrl(file.path);
+                        const imgUrl = this.getResourceUrl(file);
                         if (imgUrl) {
                             itemsData.push({ url: imgUrl, caption: file.basename, file: file });
                         }
@@ -231,7 +235,7 @@ class LazyAlbumRenderer extends obsidian.MarkdownRenderChild {
                 });
             } else if (abstractFile instanceof obsidian.TFile) {
                 if (["jpg","jpeg","png","webp","gif"].includes(abstractFile.extension.toLowerCase())) {
-                    const imgUrl = this.getResourceUrl(abstractFile.path);
+                    const imgUrl = this.getResourceUrl(abstractFile);
                     if (imgUrl) {
                         itemsData.push({ url: imgUrl, caption: captionPart || abstractFile.basename, file: abstractFile });
                     }
