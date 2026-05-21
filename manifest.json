@@ -1,9 +1,9 @@
 {
     "id": "lazy-album",
     "name": "Lazy Album",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "minAppVersion": "1.0.0",
-    "description": "Masonry image gallery with lightbox, keyboard navigation, and image deletion.",
+    "description": "Masonry image gallery with lightbox, keyboard navigation, swipe gestures, and image deletion.",
     "author": "AQJK",
-    "isDesktopOnly": true
+    "isDesktopOnly": false
 }

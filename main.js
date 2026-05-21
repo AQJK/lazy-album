@@ -15,7 +15,7 @@ const TRANSLATIONS = {
         emptyAlbum: "🖼️ Lazy Album: No images found",
         loading: "⌛ Loading or no content to display",
         lightboxClose: "Close (Esc)",
-        lightboxDelete: "Cmd+Delete to remove file",
+        lightboxDelete: "Cmd+Backspace to delete · Tap trash icon on mobile",
         lightboxDeleteConfirm: "Delete this image?",
         lightboxDeleted: "🗑️ Image deleted",
     },
@@ -30,7 +30,7 @@ const TRANSLATIONS = {
         emptyAlbum: "🖼️ Lazy Album: 暂无图片",
         loading: "⌛ 正在加载或无内容可显示",
         lightboxClose: "关闭 (Esc)",
-        lightboxDelete: "Cmd+Delete 删除文件",
+        lightboxDelete: "Cmd+Backspace 删除 · 移动端点击垃圾桶图标",
         lightboxDeleteConfirm: "删除这张图片？",
         lightboxDeleted: "🗑️ 图片已删除",
     }
@@ -139,6 +139,19 @@ class LazyAlbumRenderer extends obsidian.MarkdownRenderChild {
         this.container = container;
         this.ctx = ctx;
         this.currentPage = 0;
+        this.isMobile = !obsidian.Platform.isDesktop;
+    }
+
+    getResourceUrl(path) {
+        try {
+            return this.plugin.app.vault.getResourcePath(path);
+        } catch {
+            try {
+                return this.plugin.app.vault.adapter.getResourcePath(path);
+            } catch {
+                return null;
+            }
+        }
     }
 
     onload() {
@@ -210,7 +223,7 @@ class LazyAlbumRenderer extends obsidian.MarkdownRenderChild {
                     .sort((a, b) => (b.stat?.mtime || 0) - (a.stat?.mtime || 0));
                 sortedChildren.forEach(file => {
                     if (!excludeList.includes(file.name) && !excludeList.includes(file.path)) {
-                        const imgUrl = this.plugin.app.vault.adapter.getResourcePath(file.path);
+                        const imgUrl = this.getResourceUrl(file.path);
                         if (imgUrl) {
                             itemsData.push({ url: imgUrl, caption: file.basename, file: file });
                         }
@@ -218,7 +231,7 @@ class LazyAlbumRenderer extends obsidian.MarkdownRenderChild {
                 });
             } else if (abstractFile instanceof obsidian.TFile) {
                 if (["jpg","jpeg","png","webp","gif"].includes(abstractFile.extension.toLowerCase())) {
-                    const imgUrl = this.plugin.app.vault.adapter.getResourcePath(abstractFile.path);
+                    const imgUrl = this.getResourceUrl(abstractFile.path);
                     if (imgUrl) {
                         itemsData.push({ url: imgUrl, caption: captionPart || abstractFile.basename, file: abstractFile });
                     }
@@ -361,8 +374,26 @@ class LazyAlbumRenderer extends obsidian.MarkdownRenderChild {
             }
         });
 
-        // Delete hint
+        // Delete hint (desktop keyboard shortcut)
         const deleteHint = overlay.createEl("div", { cls: "lazy-lightbox-delete-hint", text: t.lightboxDelete });
+
+        // Mobile delete button (trash icon, shown on touch devices)
+        if (this.isMobile) {
+            const mobileDeleteBtn = overlay.createEl("button", { 
+                cls: "lazy-lightbox-mobile-delete",
+                attr: { "aria-label": "Delete image" }
+            });
+            mobileDeleteBtn.innerHTML = "🗑️";
+            mobileDeleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                const item = items[currentIndex];
+                if (item && item.file) {
+                    this.deleteImageFromLightbox(item, overlay);
+                } else {
+                    new obsidian.Notice("Cannot delete: not a local file");
+                }
+            };
+        }
 
         // Image
         const img = overlay.createEl("img", { cls: "lazy-lightbox-img" });
@@ -407,6 +438,32 @@ class LazyAlbumRenderer extends obsidian.MarkdownRenderChild {
             }
         };
         document.addEventListener("keydown", keyHandler);
+
+        // Touch swipe navigation (mobile)
+        let touchStartX = 0;
+        let touchStartY = 0;
+        const touchHandler = (e) => {
+            if (e.touches.length !== 1) return;
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        };
+        const touchEndHandler = (e) => {
+            if (touchStartX === 0) return;
+            const dx = e.changedTouches[0].clientX - touchStartX;
+            const dy = e.changedTouches[0].clientY - touchStartY;
+            // Only trigger horizontal swipe (ignore vertical scrolling)
+            if (Math.abs(dx) > Math.abs(dy) * 2 && Math.abs(dx) > 50) {
+                if (dx > 0) {
+                    updateImage(currentIndex - 1);  // swipe right → previous
+                } else {
+                    updateImage(currentIndex + 1);  // swipe left → next
+                }
+            }
+            touchStartX = 0;
+            touchStartY = 0;
+        };
+        overlay.addEventListener("touchstart", touchHandler, { passive: true });
+        overlay.addEventListener("touchend", touchEndHandler, { passive: true });
 
         // Remove listener when closed
         const observer = new MutationObserver(() => {

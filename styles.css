@@ -211,6 +211,33 @@
     color: rgba(255, 100, 100, 0.5);
     font-size: 12px;
     font-family: inherit;
+    white-space: nowrap;
+}
+
+/* Mobile delete button in lightbox */
+.lazy-lightbox-mobile-delete {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(255, 60, 60, 0.25);
+    border: 1px solid rgba(255, 60, 60, 0.4);
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    font-size: 22px;
+    cursor: pointer;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+    transition: background 0.2s, transform 0.15s;
+    line-height: 1;
+}
+.lazy-lightbox-mobile-delete:active {
+    background: rgba(255, 60, 60, 0.5);
+    transform: scale(0.9);
 }
 
 /* 适配移动端 */
@@ -218,5 +245,48 @@
     .lazy-album-container {
         column-count: 2 !important;
         column-gap: 8px !important;
+    }
+
+    /* Larger touch targets for lightbox nav on mobile */
+    .lazy-lightbox-overlay .lazy-lightbox-nav {
+        font-size: 40px;
+        padding: 24px 16px;
+    }
+    .lazy-lightbox-overlay .lazy-lightbox-nav.prev {
+        left: 4px;
+    }
+    .lazy-lightbox-overlay .lazy-lightbox-nav.next {
+        right: 4px;
+    }
+
+    /* Bigger close button for mobile */
+    .lazy-lightbox-overlay .lazy-lightbox-close {
+        font-size: 36px;
+        top: 12px;
+        right: 16px;
+        padding: 8px;
+    }
+
+    /* Ensure caption is visible on touch (no hover on mobile) */
+    .lazy-album-caption {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    /* Pagination compact for mobile */
+    .lazy-capsule-nav {
+        padding: 2px 8px;
+    }
+    .lazy-nav-btn {
+        padding: 8px 12px;
+    }
+
+    /* Delete hint compact on mobile */
+    .lazy-lightbox-overlay .lazy-lightbox-delete-hint {
+        font-size: 10px;
+        bottom: 75px;
+        white-space: normal;
+        text-align: center;
+        max-width: 80%;
     }
 }
